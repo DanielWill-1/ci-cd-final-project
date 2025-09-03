@@ -1,0 +1,44 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-and-test-pipeline
+spec:
+  workspaces:
+    - name: pipeline-ws
+  params:
+    - name: git-repo-url
+      type: string
+    - name: git-revision
+      type: string
+      default: main
+  tasks:
+    - name: fetch-code
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: pipeline-ws
+      params:
+        - name: url
+          value: $(params.git-repo-url)
+        - name: revision
+          value: $(params.git-revision)
+    - name: run-tests
+      runAfter:
+        - fetch-code
+      taskRef:
+        name: nose
+      workspaces:
+        - name: source
+          workspace: pipeline-ws
+      params:
+        - name: args
+          value: "-v"
+    - name: cleanup-workspace
+      runAfter:
+        - run-tests
+      taskRef:
+        name: cleanup
+      workspaces:
+        - name: source
+          workspace: pipeline-ws
